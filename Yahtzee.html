@@ -1,0 +1,843 @@
+<html>
+
+<head>
+<title>Yahtzee</title>
+<script>
+var beginningRoll = false;
+var img1 = 'Images/One.jpg';
+var img2 = 'Images/Two.jpg';
+var img3 = 'Images/Three.jpg';
+var img4 = 'Images/Four.jpg';
+var img5 = 'Images/Five.jpg';
+var img6 = 'Images/Six.jpg';
+var totalSinglesAdded = 0;
+var lowerSubTotal = 0;
+var higherSubTotal = 0;
+var boxesEdited = 0;
+var allowAssignment = false;
+var notAllowedMsg = 'An item for this roll has already been assigned.\nPlease roll again.';
+var mapOfGifsToNumber = [['Images/One.jpg', 1], ['Images/OneHold.jpg', 1],
+							 ['Images/Two.jpg', 2], ['Images/TwoHold.jpg', 2],
+							 ['Images/Three.jpg', 3], ['Images/ThreeHold.jpg', 3],
+							 ['Images/Four.jpg', 4], ['Images/FourHold.jpg', 4],
+							 ['Images/Five.jpg', 5], ['Images/FiveHold.jpg', 5],
+							 ['Images/Six.jpg', 6], ['Images/SixHold.jpg', 6]];
+var diceHeld = [false, false, false, false, false];
+var endRollDice = [];
+var howManyRolls = 0;
+var totalRolls = 0;
+function doOnLoad() {
+	document.detailForm['Image1'].src = img1;
+	document.detailForm['Image2'].src = img2;
+	document.detailForm['Image3'].src = img3;
+	document.detailForm['Image4'].src = img4;
+	document.detailForm['Image5'].src = img5;
+}
+function sendScore(aName, aValue) {
+    var win = window.open('','XMLScreen','');
+    var doc = win.document;
+    doc.write('<HTML>\n');
+    doc.write('<sc' + 'ript>\n');
+    doc.write('function doOnLoad(aName, aValue)\n');
+    doc.write('{\n');
+    //doc.write('    var s = "http://www.lowensteincentral.com/Yahtzee/writeFile.php";\n');
+    doc.write('    document.adetailForm.action = "http://www.lowensteincentral.com/Yahtzee/writeFile.php?aName=' + aName + '&aValue=' + aValue + '";\n');
+    doc.write('    document.adetailForm.mehtod = "POST";\n');
+    doc.write('    document.adetailForm.submit();\n');
+    doc.write('    opener.top.frames.ScoresArea.location = "http://www.lowensteincentral.com/Yahtzee/fileRead.php";\n');
+    doc.write('    self.close();\n');
+    doc.write('}\n');
+    doc.write('</sc' + 'ript>\n');
+    doc.write('<body onload="doOnLoad(\'' + aName + '\', ' + aValue + ')">\n');
+    doc.write('<form name="adetailForm">\n');
+    doc.write('<input type="hidden" name="aName" value="' + aName + '">\n');
+    doc.write('<input type="hidden" name="aValue" value="' + aValue + '">\n');
+    doc.write('</form>\n');
+    doc.write('</body>\n');
+    doc.write('</HTML>\n');
+    doc.close();
+}
+function checkBoxesEdited() {
+	if (boxesEdited == 13) {
+		document.detailForm['rollDiceButton'].disabled = true;
+		document.detailForm['GrandTotalEdit'].value = lowerSubTotal + higherSubTotal;
+	}
+}
+function clearEditBoxes() {
+	document.detailForm['OnesEdit'].value = '';
+	document.detailForm['TwosEdit'].value = '';
+	document.detailForm['ThreesEdit'].value = '';
+	document.detailForm['FoursEdit'].value = '';
+	document.detailForm['FivesEdit'].value = '';
+	document.detailForm['SixesEdit'].value = '';
+	document.detailForm['YahtzeeEdit'].value = '';
+	document.detailForm['LuckEdit'].value = '';
+	document.detailForm['SubTotalLowerEdit'].value = '';
+	document.detailForm['HigherTotal'].value = '';
+	document.detailForm['BonusEdit'].value = '';
+	document.detailForm['TotalLowerEdit'].value = '';
+	document.detailForm['GrandTotalEdit'].value = '';
+	document.detailForm['LargeStraightEdit'].value = '';
+	document.detailForm['SmallStraightEdit'].value = '';
+	document.detailForm['FullHouseEdit'].value = '';
+	document.detailForm['FourOfAKindEdit'].value = '';
+	document.detailForm['ThreeOfAKindEdit'].value = '';
+}
+function startNewGame() {
+	if (beginningRoll) {
+		if (!confirm('Are you sure you want to start a new game?')) {
+			return;
+		}
+	}
+	beginningRoll = false;
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	lowerSubTotal = 0;
+	higherSubTotal = 0;
+	clearEditBoxes();
+	boxesEdited = 0;
+	totalSinglesAdded = 0;
+}
+function getFullHouse(aObject) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	if (document.detailForm[aObject].value != '') {
+		alert('Full House has already been assigned.');
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	var totalScore = 0;
+	doSort();
+	if ((parseInt(endRollDice[0]) == parseInt(endRollDice[1])) &&
+	    (parseInt(endRollDice[1]) == parseInt(endRollDice[2])) &&
+	    (parseInt(endRollDice[3]) == parseInt(endRollDice[4]))) {
+
+	    totalScore = 25;
+	}
+	else
+	if ((parseInt(endRollDice[0]) == parseInt(endRollDice[1])) &&
+
+	    (parseInt(endRollDice[2]) == parseInt(endRollDice[3])) &&
+	    (parseInt(endRollDice[3]) == parseInt(endRollDice[4]))) {
+
+	    totalScore = 25;
+	}
+
+	document.detailForm[aObject].value = totalScore;
+	higherSubTotal += totalScore;
+	document.detailForm['HigherTotal'].value = higherSubTotal;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	checkBoxesEdited();
+}
+function doSort() {
+	getValueOfDice();
+	var num1 = 0;
+	var num2 = 0;
+	for (var i = 0; i < endRollDice.length; i++) {
+		for (j = 1; j < endRollDice.length; j++) {
+			num1 = endRollDice[j - 1];
+			num2 = endRollDice[j];
+			if (num1 > num2) {
+				endRollDice[j - 1] = num2;
+				endRollDice[j] = num1;
+			}
+		}
+	}
+}
+function stripEquals() {
+	var strippedArray = [];
+	var length = endRollDice.length;
+	for (var i = 0; i < (length - 1); i++) {
+		if (endRollDice[i + 1] != endRollDice[i]) {
+			strippedArray[(strippedArray.length)] = endRollDice[i];
+		}
+	}
+	strippedArray[(strippedArray.length)] = endRollDice[(length - 1)];
+	return strippedArray;
+}
+function getStraight(aObject, shortLong) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	var aMsg = '';
+	if (shortLong == 's') {
+		aMsg = 'Short Straight has already been assigned.';
+	}
+	else
+	if (shortLong == 'l') {
+		aMsg = 'Large Straight has already been assigned.';
+	}
+	if (document.detailForm[aObject].value != '') {
+		alert(aMsg);
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	var totalScore = 0;
+	doSort();
+	var aLength = -1;
+	if (shortLong == 'l') {
+		if ((parseInt(endRollDice[1]) == parseInt((endRollDice[0]) + 1)) &&
+		    (parseInt(endRollDice[2]) == parseInt((endRollDice[1]) + 1)) &&
+		    (parseInt(endRollDice[3]) == parseInt((endRollDice[2]) + 1)) &&
+		    (parseInt(endRollDice[4]) == parseInt((endRollDice[3]) + 1))) {
+
+		    totalScore = 40;
+		}
+	}
+	else {
+		var strippedArray = [];
+		strippedArray = stripEquals();
+		if ((parseInt(strippedArray[1]) == parseInt((strippedArray[0]) + 1)) &&
+		    (parseInt(strippedArray[2]) == parseInt((strippedArray[1]) + 1)) &&
+		    (parseInt(strippedArray[3]) == parseInt((strippedArray[2]) + 1))) {
+
+		    totalScore = 30;
+		}
+		else
+		if ((parseInt(strippedArray[2]) == parseInt((strippedArray[1]) + 1)) &&
+		    (parseInt(strippedArray[3]) == parseInt((strippedArray[2]) + 1)) &&
+		    (parseInt(strippedArray[4]) == parseInt((strippedArray[3]) + 1))) {
+
+		    totalScore = 30;
+		}
+	}
+	document.detailForm[aObject].value = totalScore;
+	higherSubTotal += totalScore;
+	document.detailForm['HigherTotal'].value = higherSubTotal;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	checkBoxesEdited();
+}
+
+function breakGif(aSrc) {
+	var index = aSrc.indexOf('/Images/');
+	if (index > -1) {
+		return aSrc.substring((index + 1), aSrc.length);
+	}
+	return aSrc;
+}
+
+function getDiceValue(aSrc) {
+	aSrc = breakGif(aSrc);
+	for (var i = 0; i < mapOfGifsToNumber.length; i++) {
+		if (breakGif(aSrc) == mapOfGifsToNumber[i][0]) {
+			return mapOfGifsToNumber[i][1];
+		}
+	}
+}
+
+function getValueOfDice() {
+	var aObject = '';
+	for (var i = 0; i < 5; i++) {
+		aObject = 'Image' + (i + 1);
+		endRollDice[(endRollDice.length)] = getDiceValue(document.detailForm[aObject].src);
+	}
+}
+function getTotalSingles(aNum) {
+	var aReturnNum = 0;
+	for (var i = 0; i < endRollDice.length; i++) {
+		if (aNum == endRollDice[i]) {
+			aReturnNum += aNum;
+		}
+	}
+	return aReturnNum;
+}
+function unlockAnyLocked() {
+	for (var i = 0; i < diceHeld.length; i++) {
+		if (diceHeld[i]) {
+			keepDice(i + 1);
+		}
+	}
+}
+function getSinglesValues(aObjectName, whichNumber) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	if (totalSinglesAdded == 21) {
+		alert('All single values have already been assigned.');
+		return;
+	}
+	if (document.detailForm[aObjectName].value != '') {
+		alert('Single value ' + whichNumber + ' has already been assigned.');
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	getValueOfDice();
+	var aNum = getTotalSingles(whichNumber);
+	document.detailForm[aObjectName].value = aNum;
+	lowerSubTotal += aNum;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	totalSinglesAdded += whichNumber;
+	//SubTotalLowerEdit
+	document.detailForm['SubTotalLowerEdit'].value = lowerSubTotal;
+	if (totalSinglesAdded == 21) {
+		if (lowerSubTotal >= 63) {
+			document.detailForm['BonusEdit'].value = '35';
+			lowerSubTotal += 35;
+		}
+		document.detailForm['TotalLowerEdit'].value = lowerSubTotal;
+	}
+	checkBoxesEdited();
+}
+function addDiceNumbers() {
+	var totalScore = 0;
+	for (var i = 0; i < endRollDice.length; i++) {
+		totalScore += endRollDice[i];
+	}
+	return totalScore;
+}
+function getLuckDice(aObject) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	if (document.detailForm[aObject].value != '') {
+		alert('The Luck has already been assigned.');
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	getValueOfDice();
+	var totalScore = 0;
+	totalScore = addDiceNumbers();
+	document.detailForm[aObject].value = totalScore;
+	higherSubTotal += totalScore;
+	document.detailForm['HigherTotal'].value = higherSubTotal;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	checkBoxesEdited();
+}
+function getKinds(aObject, aMath) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	if (document.detailForm[aObject].value != '') {
+		alert('The 3 of a kind has already been assigned.');
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	getValueOfDice();
+	var oneMap = 0;
+	vartwoMap = 0;
+	var threeMap = 0;
+	var fourMap = 0;
+	var fiveMap = 0;
+	var sixMap = 0;
+	if (aMath == 3) {
+		oneMap = 3;
+		twoMap = 6;
+		threeMap = 9;
+		fourMap = 12;
+		fiveMap = 15;
+		sixMap = 18;
+	}
+	else
+	if (aMath == 4) {
+		oneMap = 4;
+		twoMap = 8;
+		threeMap = 12;
+		fourMap = 16;
+		fiveMap = 20;
+		sixMap = 24;
+	}
+
+	var one = 0;
+	var two = 0;
+	var three = 0;
+	var four = 0;
+	var five = 0;
+	var six = 0;
+
+	var aList = [];
+
+	for (var i = 0; i < endRollDice.length; i++) {
+		aList[(aList.length)] = endRollDice[i];
+	}
+	var aListNum = 0;
+
+	for (var i = 0; i < aList.length; i++) {
+		aListNum = aList[i];
+		switch (aListNum) {
+			case 1:	one += aListNum;
+						break;
+			case 2:	two += aListNum;
+						break;
+			case 3:	three += aListNum;
+						break;
+			case 4:	four += aListNum;
+						break;
+			case 5:	five += aListNum;
+						break;
+			case 6:	six += aListNum;
+						break;
+		}
+	}
+	var matchFound = false;
+	var totalScore = 0;
+	if (one >= oneMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	else
+	if (two >= twoMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	else
+	if (three >= threeMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	else
+	if (four >= fourMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	else
+	if (five >= fiveMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	else
+	if (six >= sixMap) {
+		matchFound = true;
+		totalScore = one + two + three + four + five + six;
+	}
+	document.detailForm[aObject].value = totalScore;
+	higherSubTotal += totalScore;
+	document.detailForm['HigherTotal'].value = higherSubTotal;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	checkBoxesEdited();
+}
+function getYahtzee(aObject) {
+	if (!beginningRoll) {
+		alert('You need to roll the dice before trying to score.');
+		return;
+	}
+	if (document.detailForm[aObject].value != '') {
+		alert('Yahtzee has already been assigned.');
+		return;
+	}
+	if (!allowAssignment) {
+		alert(notAllowedMsg);
+		return;
+	}
+	allowAssignment = false;
+	boxesEdited++;
+	getValueOfDice();
+	var aVal = endRollDice[0];
+	var yahtzee = true;
+	for (var i = 0; i < endRollDice.length; i++) {
+		if (endRollDice[i] != aVal) {
+			yahtzee = false;
+			break;
+		}
+	}
+	if (yahtzee) {
+		higherSubTotal += 50;
+		document.detailForm[aObject].value = 50;
+	}
+	else {
+		document.detailForm[aObject].value = 0;
+	}
+
+	document.detailForm['HigherTotal'].value = higherSubTotal;
+
+	unlockAnyLocked();
+	endRollDice = [];
+	howManyRolls = 0;
+	totalRolls = 0;
+	document.detailForm['rollDiceButton'].disabled = false;
+	checkBoxesEdited();
+}
+function rollDice() {
+	beginningRoll = true;
+	allowAssignment = true;
+	var aNum = 0;
+	var aObject = '';
+	howManyRolls++;
+	for (var j = 0; j < diceHeld.length; j++) {
+		if (!diceHeld[j]) {
+			aNum = Math.floor(Math.random() * 6) + 1;
+			aObject = 'Image' + (j + 1);
+			switch (aNum) {
+				case 1:	document.detailForm[aObject].src = img1;
+							break;
+				case 2:	document.detailForm[aObject].src = img2;
+							break;
+				case 3:	document.detailForm[aObject].src = img3;
+							break;
+				case 4:	document.detailForm[aObject].src = img4;
+							break;
+				case 5:	document.detailForm[aObject].src = img5;
+							break;
+				case 6:	document.detailForm[aObject].src = img6;
+							break;
+				default: break;
+			}
+		}
+	}
+	if (totalRolls == 3) {
+		document.detailForm['rollDiceButton'].disabled = true;
+	}
+	if (howManyRolls < 6) {
+		setTimeout("rollDice()", 320);
+	}
+	else {
+		howManyRolls = 0;
+	}
+}
+function keepDice(aDice) {
+	if (diceHeld[(aDice - 1)]) {
+		diceHeld[(aDice - 1)] = false;
+	}
+	else {
+		diceHeld[(aDice - 1)] = true;
+	}
+	var aObject = 'Image' + aDice;
+	var aSrc = document.detailForm[aObject].src;
+	if (aSrc.indexOf('Hold') > -1) {
+		aSrc = aSrc.substring(0, (aSrc.length - 8));
+		aSrc += '.jpg';
+	}
+	else {
+		aSrc = aSrc.substring(0, (aSrc.length - 4));
+		aSrc += 'Hold.jpg';
+	}
+
+	document.detailForm[aObject].src = aSrc;
+}
+</script>
+</head>
+
+<body onLoad="doOnLoad()">
+
+<form name="detailForm">
+
+<table width="350" height="50" border="0">
+	<tr>
+		<td width="50">
+			<img name="Image1" src=""></img>
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td width="50">
+			<img name="Image2" src=""></img>
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td width="50">
+			<img name="Image3" src=""></img>
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td width="50">
+			<img name="Image4" src=""></img>
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td width="50">
+			<img name="Image5" src=""></img>
+		</td>
+	</tr>
+	<tr>
+		<td align="center" width="50">
+			<input type="button" width="100%" value="Hold" onClick="keepDice(1)">
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td align="center" width="50">
+			<input type="button" width="100%" value="Hold" onClick="keepDice(2)">
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td align="center" width="50">
+			<input type="button" width="100%" value="Hold" onClick="keepDice(3)">
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td align="center" width="50">
+			<input type="button" width="100%" value="Hold" onClick="keepDice(4)">
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td align="center" width="50">
+			<input type="button" width="100%" value="Hold" onClick="keepDice(5)">
+		</td>
+	</tr>
+	<tr>
+		<td colspan="9">
+			&nbsp;
+		</td>
+	</tr>
+</table>
+<table width="350">
+	<tr>
+		<td width="150">
+			<input disabled type="button" name="rollDiceButton" onclick="totalRolls++;rollDice();" value="Roll Dice">
+		</td>
+		<td width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			<input type="button" name="StartNewGame" onclick="startNewGame();" value="Start New Game">
+		</td>
+	</tr>
+</table>
+<br>
+<table border="1" width="450">
+	<tr>
+		<td width="150">
+			One's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 1)" name="OnesEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			3 of a kind
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getKinds(this.name, 3)" name="ThreeOfAKindEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Two's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 2)" name="TwosEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			4 of a kind
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getKinds(this.name, 4)" name="FourOfAKindEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Three's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 3)" name="ThreesEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Full House (25)
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getFullHouse(this.name)" name="FullHouseEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Four's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 4)" name="FoursEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Small Straight (30)
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getStraight(this.name, 's')" name="SmallStraightEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Five's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 5)" name="FivesEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Large Straight (40)
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getStraight(this.name, 'l')" name="LargeStraightEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Six's
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getSinglesValues(this.name, 6)" name="SixesEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Yahtzee (50)
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getYahtzee(this.name)" name="YahtzeeEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			&nbsp
+		</td>
+		<td align="right" width="50">
+			&nbsp
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Luck
+		</td>
+		<td align="right" width="50">
+			<input type="text" onclick="getLuckDice(this.name)" name="LuckEdit" readOnly style="text-align:right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			&nbsp;
+		</td>
+		<td align="right" width="50">
+			&nbsp
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			&nbsp
+		</td>
+		<td align="right" width="50">
+			&nbsp
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Sub Total
+		</td>
+		<td align="right" width="50">
+			<input type="text" name="SubTotalLowerEdit" readOnly style="text-align: right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Total
+		</td>
+		<td align="right" width="50">
+			<input type="text" name="HigherTotal" readOnly style="text-align: right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Bonus (35) for 63+
+		</td>
+		<td align="right" width="50">
+			<input type="text" name="BonusEdit" readOnly style="text-align: right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			&nbsp;
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+	</tr>
+	<tr>
+		<td width="150">
+			Total
+		</td>
+		<td align="right" width="50">
+			<input type="text" name="TotalLowerEdit" readOnly style="text-align: right; color: yellow; background: gray;width: 90%">
+		</td>
+		<td align="right" width="50">
+			&nbsp;
+		</td>
+		<td width="150">
+			Grand Total
+		</td>
+		<td align="right" width="50">
+			<input type="text" name="GrandTotalEdit" readOnly style="text-align: right; color: yellow; background: gray;width: 90%">
+		</td>
+	</tr>
+</table>
+</form>
+</body>
+
+</html>
